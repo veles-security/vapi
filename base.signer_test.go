@@ -1,9 +1,7 @@
 package vapi_test
 
 import (
-	"bytes"
 	"context"
-	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
 	"testing"
@@ -16,24 +14,23 @@ func TestSigner_Sign(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
 		// Named input parameters for target function.
-		artifact vapi.Message
-		options  []vapi.SigAlg
-		signer   crypto.Signer
-		want     []byte
-		wantErr  bool
+		artifact        vapi.Message
+		signerOptions   []vapi.SigAlg
+		verifierOptions []vapi.SigAlg
+		signer          *vapi.Signer
+		verifier        *vapi.SignVerifier
+		wantErr         bool
 	}{
 		{
 			name:     "success",
 			artifact: vapi.Message("digest"),
-			options:  []vapi.SigAlg{vapi.SigAlgRS256},
-			signer:   keyRSA2048,
-			want:     []byte("signature"),
+			signer:   &vapi.Signer{Alg: vapi.SigAlgRS256, Key: keyRSA2048},
+			verifier: &vapi.SignVerifier{Alg: vapi.SigAlgRS256, Key: &keyRSA2048.PublicKey},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &vapi.Signer{Alg: vapi.SigAlgRS256, Key: tt.signer}
-			got, gotErr := s.Sign(context.Background(), tt.artifact, tt.options...)
+			got, gotErr := tt.signer.Sign(context.Background(), tt.artifact, tt.signerOptions...)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("Sign() failed: %v", gotErr)
@@ -43,8 +40,8 @@ func TestSigner_Sign(t *testing.T) {
 			if tt.wantErr {
 				t.Fatal("Sign() succeeded unexpectedly")
 			}
-			if !bytes.Equal(got, tt.want) {
-				t.Errorf("Sign() = %v, want %v", got, tt.want)
+			if err := tt.verifier.VerifySignature(got, tt.artifact, tt.verifierOptions...); err != nil {
+				t.Errorf("VerifySignature() failed: %v", err)
 			}
 		})
 	}
