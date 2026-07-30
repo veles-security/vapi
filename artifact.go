@@ -112,6 +112,7 @@ type ValidationSchemer[A Artifacter, O any] interface {
 // IssueSchemer issues an artifact of type A using scheme-specific options O.
 type IssueSchemer[O any, A Artifacter] interface {
 	Issue(ctx context.Context, options ...O) (A, error)
+	IssueForPrincipal(ctx context.Context, principal Principaler, options ...O) (A, error)
 }
 
 // ExchangeSchemer exchanges an artifact of type SA into an artifact of type TA
