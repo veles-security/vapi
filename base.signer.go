@@ -303,6 +303,9 @@ func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) 
 	if len(options) != 0 {
 		alg = options[0]
 	}
+	if alg == SigAlgHS256 || alg == SigAlgHS384 || alg == SigAlgHS512 {
+		return s.Key.Sign(rand.Reader, artifact, alg)
+	}
 	digest := []byte(artifact)
 	if hash := alg.Hash(); hash != 0 {
 		if !hash.Available() {
