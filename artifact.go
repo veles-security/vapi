@@ -141,6 +141,16 @@ type ExtractorSchemer[C any, A Artifacter, O any] interface {
 	ExtractArtifact(ctx context.Context, carrier C, options ...O) (A, error)
 }
 
+// Extracts Principaler from an artifact A
+// For example Principaler from JWT token
 type PrincipalSchemer[A Artifacter, O any] interface {
 	ExtractPrincipal(ctx context.Context, artifact A, options ...O) (Principaler, error)
+}
+
+type SignerSchemer[A Artifacter, O any] interface {
+	Sign(ctx context.Context, artifact A, options ...O) ([]byte, error)
+}
+
+type SignatureVerificationSchemer[O any] interface {
+	VerifySignature(signature []byte, digest []byte, options ...O) error
 }
