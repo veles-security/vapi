@@ -80,15 +80,6 @@ func (s *SignVerifier) VerifySignature(signature []byte, digest []byte, options 
 		}
 		valid = ed25519.Verify(key, message, signature)
 
-	case SigAlgEd448:
-		key, ok := s.Key.(interface {
-			Verify(message, signature []byte) bool
-		})
-		if !ok {
-			return &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for Ed448", s.Key)}
-		}
-		valid = key.Verify(message, signature)
-
 	default:
 		return &vapi.ErrorCategory{Category: vapi.ErrUnsupported, Cause: fmt.Errorf("unsupported signature algorithm %d", alg)}
 	}

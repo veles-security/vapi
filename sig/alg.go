@@ -96,6 +96,8 @@ const (
 
 	// Edwards-curve signatures.
 	SigAlgEd25519
+	// Reserved for API compatibility. Ed448 is not currently implemented.
+	// Parsers and signing/verification operations reject this value.
 	SigAlgEd448
 
 	// Optional/niche: secp256k1 + SHA-256.
@@ -133,8 +135,6 @@ func NewSigAlgFromOAuth(s string) (SigAlg, error) {
 		return SigAlgPS512, nil
 	case "EdDSA", "Ed25519":
 		return SigAlgEd25519, nil
-	case "Ed448":
-		return SigAlgEd448, nil
 	case "ES256K":
 		return SigAlgES256K, nil
 	case "RS1":
@@ -171,8 +171,6 @@ func (sa SigAlg) ToOAuth() (string, error) {
 		return "PS512", nil
 	case SigAlgEd25519:
 		return "EdDSA", nil
-	case SigAlgEd448:
-		return "Ed448", nil
 	case SigAlgES256K:
 		return "ES256K", nil
 	case SigAlgRSASHA1:
@@ -210,8 +208,6 @@ func NewFromSAML(s string) (SigAlg, error) {
 		return SigAlgPS512, nil
 	case "http://www.w3.org/2021/04/xmldsig-more#eddsa-ed25519":
 		return SigAlgEd25519, nil
-	case "http://www.w3.org/2021/04/xmldsig-more#eddsa-ed448":
-		return SigAlgEd448, nil
 	case "http://www.w3.org/2001/04/xmldsig-more#ecdsa-secp256k1-sha256":
 		return SigAlgES256K, nil
 	case "http://www.w3.org/2000/09/xmldsig#rsa-sha1":
@@ -249,8 +245,6 @@ func (sa SigAlg) ToSAML() (string, error) {
 		return "http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1", nil
 	case SigAlgEd25519:
 		return "http://www.w3.org/2021/04/xmldsig-more#eddsa-ed25519", nil
-	case SigAlgEd448:
-		return "http://www.w3.org/2021/04/xmldsig-more#eddsa-ed448", nil
 	case SigAlgES256K:
 		return "http://www.w3.org/2001/04/xmldsig-more#ecdsa-secp256k1-sha256", nil
 	case SigAlgRSASHA1:

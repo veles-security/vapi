@@ -32,10 +32,6 @@ func TestSigner_Sign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	keyEd448Public, keyEd448, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
 	hmacKey := []byte("a sufficiently long shared secret for signature tests")
 	artifact := sig.Message("digest")
 	hmacSignerKey := sig.NewHmacKey(hmacKey)
@@ -63,7 +59,6 @@ func TestSigner_Sign(t *testing.T) {
 		{name: "PS384", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgPS384, Key: sig.PssKey{keyRSA2048}}, verifier: &sig.SignVerifier{Alg: sig.SigAlgPS384, Key: &keyRSA2048.PublicKey}},
 		{name: "PS512", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgPS512, Key: sig.PssKey{keyRSA2048}}, verifier: &sig.SignVerifier{Alg: sig.SigAlgPS512, Key: &keyRSA2048.PublicKey}},
 		{name: "Ed25519", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgEd25519, Key: keyEd25519}, verifier: &sig.SignVerifier{Alg: sig.SigAlgEd25519, Key: keyEd25519Public}},
-		{name: "Ed448", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgEd448, Key: sig.Ed448PrivateKey(keyEd448)}, verifier: &sig.SignVerifier{Alg: sig.SigAlgEd448, Key: sig.Ed448PublicKey(keyEd448Public)}},
 		{name: "ES256K", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgES256K, Key: keyES256}, verifier: &sig.SignVerifier{Alg: sig.SigAlgES256K, Key: &keyES256.PublicKey}},
 		{name: "RSASHA1", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgRSASHA1, Key: keyRSA2048}, verifier: &sig.SignVerifier{Alg: sig.SigAlgRSASHA1, Key: &keyRSA2048.PublicKey}},
 	}
