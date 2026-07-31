@@ -8,8 +8,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	_ "crypto/sha1"
+	"errors"
 	"testing"
 
+	"github.com/veles-security/vapi"
 	"github.com/veles-security/vapi/sig"
 )
 
@@ -169,5 +171,77 @@ func TestNilReceiverReturnsError(t *testing.T) {
 	var verifier *sig.SignVerifier
 	if err := verifier.VerifySignature(nil, []byte("message")); err == nil {
 		t.Fatal("nil SignVerifier did not return an error")
+	}
+}
+
+func TestSignatureErrorCategories(t *testing.T) {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := sig.Message("message")
+
+	tests := []struct {
+		name string
+		err  func() error
+		want []error
+	}{
+		{
+			name: "signer invalid algorithm",
+			err: func() error {
+				_, err := (&sig.Signer{Alg: sig.SigAlgUnknown, Key: key}).Sign(context.Background(), message)
+				return err
+			},
+			want: []error{vapi.ErrMisconfigured, sig.ErrInvalidAlgorithm},
+		},
+		{
+			name: "verifier invalid key",
+			err: func() error {
+				return (&sig.SignVerifier{Alg: sig.SigAlgRS256}).VerifySignature(nil, message)
+			},
+			want: []error{vapi.ErrMisconfigured, sig.ErrInvalidKey},
+		},
+		{
+			name: "algorithm and key mismatch",
+			err: func() error {
+				return (&sig.SignVerifier{Alg: sig.SigAlgRS256, Key: []byte("not an RSA key")}).VerifySignature(nil, message)
+			},
+			want: []error{vapi.ErrMisconfigured, sig.ErrAlgorithmKeyMismatch},
+		},
+		{
+			name: "malformed signature",
+			err: func() error {
+				return (&sig.SignVerifier{Alg: sig.SigAlgRS256, Key: &key.PublicKey}).VerifySignature([]byte("short"), message)
+			},
+			want: []error{vapi.ErrMalformed, sig.ErrMalformedSignature},
+		},
+		{
+			name: "malformed digest",
+			err: func() error {
+				return (&sig.SignVerifier{Alg: sig.SigAlgRS256, Key: &key.PublicKey}).VerifySignature(make([]byte, key.Size()), nil)
+			},
+			want: []error{vapi.ErrMalformed, sig.ErrMalformedDigest},
+		},
+		{
+			name: "invalid signature",
+			err: func() error {
+				return (&sig.SignVerifier{Alg: sig.SigAlgRS256, Key: &key.PublicKey}).VerifySignature(make([]byte, key.Size()), message)
+			},
+			want: []error{vapi.ErrInvalidSignature},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.err()
+			if err == nil {
+				t.Fatal("operation succeeded unexpectedly")
+			}
+			for _, want := range test.want {
+				if !errors.Is(err, want) {
+					t.Errorf("errors.Is(%v, %v) = false", err, want)
+				}
+			}
+		})
 	}
 }

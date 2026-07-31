@@ -18,7 +18,7 @@ type Signer struct {
 // Sign implements [SignerSchemer].
 func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) ([]byte, error) {
 	if s == nil {
-		return nil, &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("nil signer")}
+		return nil, &vapi.ErrorCategory{Category: vapi.ErrMisconfigured, Cause: fmt.Errorf("%w: nil signer", ErrInvalidKey)}
 	}
 	alg := s.Alg
 	if len(options) != 0 {
@@ -33,7 +33,7 @@ func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) 
 	digest := []byte(artifact)
 	if hash := alg.Hash(); hash != 0 {
 		if !hash.Available() {
-			return nil, &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
+			return nil, &vapi.ErrorCategory{Category: vapi.ErrMisconfigured, Cause: fmt.Errorf("%w: hash %v is unavailable", ErrInvalidAlgorithm, hash)}
 		}
 		h := hash.New()
 		_, _ = h.Write(artifact)

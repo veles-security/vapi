@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrMalformed        = errors.New("malformed")
+	ErrMisconfigured    = errors.New("misconfigured")
 	ErrUnsupported      = errors.New("unsupported")
 	ErrUntrusted        = errors.New("untrusted")
 	ErrInvalidSignature = errors.New("invalid signature")
