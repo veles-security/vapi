@@ -5,32 +5,32 @@ import (
 	"time"
 )
 
-// Artifacter is the minimal immutable representation of a parsed or newly constructed protocol object.
-type Artifacter interface {
+// Artifact is the minimal immutable representation of a parsed or newly constructed protocol object.
+type Artifact interface {
 	Kind() string
 }
 
-// PrincipalArtifacter marks artifacts that identify a principal.
-type PrincipalArtifacter interface {
-	Artifacter
-	Principal() Principaler
+// PrincipalArtifact marks artifacts that identify a principal.
+type PrincipalArtifact interface {
+	Artifact
+	Principal() Principal
 }
 
-// RequestArtifacter marks artifacts that represent a request.
-type RequestArtifacter interface {
-	Artifacter
+// RequestArtifact marks artifacts that represent a request.
+type RequestArtifact interface {
+	Artifact
 	RequestID() string
 }
 
-// ResponseArtifacter marks artifacts that represent a response.
-type ResponseArtifacter interface {
-	Artifacter
+// ResponseArtifact marks artifacts that represent a response.
+type ResponseArtifact interface {
+	Artifact
 	StatusCode() int
 }
 
-// Principaler describes an authenticated principal and its associated claims and provenance.
+// Principal describes an authenticated principal and its associated claims and provenance.
 // Implementations may vary by protocol or deployment context, so this is an interface rather than a concrete struct.
-type Principaler interface {
+type Principal interface {
 	// Issuer returns the security domain or authority that issued the identity evidence.
 	// Examples: OIDC id_token issuer "https://issuer.example"; SAML Issuer element or IdP entityID.
 	Issuer() string
@@ -85,76 +85,77 @@ type Principaler interface {
 
 	// Actor returns a delegated or acting principal when the identity context includes delegation.
 	// Examples: OIDC act claim; SAML acting subject or delegated identity.
-	Actor() Principaler
+	Actor() Principal
 
 	// Source describes the provenance of the principal, such as the protocol or upstream system.
 	// Examples: "oidc:id_token", "saml:assertion", or "ldap:active-directory".
 	Source() string
 }
 
-// DecodeSchemer decodes an explicitly selected representation into A.
+// Decoder decodes an explicitly selected representation into A.
 // Implementations must enforce limits before expensive processing.
-type DecodeSchemer[A Artifacter, O any] interface {
+type Decoder[A Artifact, O any] interface {
 	Decode(ctx context.Context, encoded []byte, options ...O) (A, error)
 }
 
-// EncodeSchemer encodes A into an explicitly selected representation.
-type EncodeSchemer[A Artifacter, O any] interface {
+// Encoder encodes A into an explicitly selected representation.
+type Encoder[A Artifact, O any] interface {
 	Encode(ctx context.Context, artifact A, options ...O) ([]byte, error)
 }
 
-// ValidationSchemer validates an artifact of type A using scheme-specific
+// Validator validates an artifact of type A using scheme-specific
 // options O.
-type ValidationSchemer[A Artifacter, O any] interface {
+type Validator[A Artifact, O any] interface {
 	Validate(ctx context.Context, artifact A, options ...O) error
 }
 
-// IssueSchemer issues an artifact of type A using scheme-specific options O.
-type IssueSchemer[O any, A Artifacter] interface {
+// Issuer issues an artifact of type A using scheme-specific options O.
+type Issuer[O any, A Artifact] interface {
 	Issue(ctx context.Context, options ...O) (A, error)
 }
 
-type IssueForPrincipalSchemer[O any, A Artifacter] interface {
-	IssueForPrincipal(ctx context.Context, principal Principaler) (A, error)
+// PrincipalIssuer issues an artifact of type A for given principal.
+type PrincipalIssuer[O any, A Artifact] interface {
+	IssueForPrincipal(ctx context.Context, principal Principal) (A, error)
 }
 
-// ExchangeSchemer exchanges an artifact of type SA into an artifact of type TA
+// Exchanger exchanges an artifact of type SA into an artifact of type TA
 // using scheme-specific options O.
-type ExchangeSchemer[SA Artifacter, TA Artifacter, O any] interface {
+type Exchanger[SA Artifact, TA Artifact, O any] interface {
 	Exchange(ctx context.Context, artifact SA, options ...O) (TA, error)
 }
 
 // Authenticator derives a principal from a request.
-type AuthSchemer[R any] interface {
-	Authenticate(ctx context.Context, request R) (Principaler, error)
+type Authenticator[R any] interface {
+	Authenticate(ctx context.Context, request R) (Principal, error)
 }
 
-type AuthApplierSchemer[R any] interface {
+type AuthApplier[R any] interface {
 	ApplyAuthentication(ctx context.Context, request R, principal Principal) error
 }
 
 // ArtifactInjector writes an artifact into a carrier such as an HTTP request
 // or response.
-type InjectorSchemer[C any, A Artifacter, O any] interface {
+type Injector[C any, A Artifact, O any] interface {
 	InjectArtifact(ctx context.Context, carrier C, artifact A, options ...O) error
 }
 
 // ArtifactExtractor reads an artifact from a carrier such as an HTTP request
 // or response.
-type ExtractorSchemer[C any, A Artifacter, O any] interface {
+type Extractor[C any, A Artifact, O any] interface {
 	ExtractArtifact(ctx context.Context, carrier C, options ...O) (A, error)
 }
 
 // Extracts Principaler from an artifact A
 // For example Principaler from JWT token
-type PrincipalSchemer[A Artifacter, O any] interface {
-	ExtractPrincipal(ctx context.Context, artifact A, options ...O) (Principaler, error)
+type PrincipalExtractor[A Artifact, O any] interface {
+	ExtractPrincipal(ctx context.Context, artifact A, options ...O) (Principal, error)
 }
 
-type SignerSchemer[A Artifacter, O any] interface {
+type Signer[A Artifact, O any] interface {
 	Sign(ctx context.Context, artifact A, options ...O) ([]byte, error)
 }
 
-type SignatureVerificationSchemer[O any] interface {
+type SignatureVerifier[O any] interface {
 	VerifySignature(signature []byte, digest []byte, options ...O) error
 }

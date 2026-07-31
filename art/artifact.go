@@ -1,4 +1,6 @@
-package vapi
+package art
+
+import "github.com/veles-security/vapi"
 
 // ArtifactBase is a simple concrete implementation of the common artifact capabilities.
 type ArtifactBase struct {
@@ -53,3 +55,5 @@ func (a *ArtifactBase) WithStatusCode(code int) *ArtifactBase {
 	a.statusCode = code
 	return a
 }
+
+var _ vapi.Artifact = &ArtifactBase{}

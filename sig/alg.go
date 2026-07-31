@@ -1,14 +1,10 @@
-package vapi
+package sig
 
 import (
-	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/hmac"
-	"crypto/rand"
-	"crypto/rsa"
 	"fmt"
+
+	"github.com/veles-security/vapi"
 )
 
 /*
@@ -182,7 +178,7 @@ func (sa SigAlg) ToOAuth() (string, error) {
 	case SigAlgRSASHA1:
 		return "RS1", nil
 	default:
-		return "unknown", ErrNotApplicable
+		return "unknown", vapi.ErrNotApplicable
 	}
 }
 
@@ -260,7 +256,7 @@ func (sa SigAlg) ToSAML() (string, error) {
 	case SigAlgRSASHA1:
 		return "http://www.w3.org/2000/09/xmldsig#rsa-sha1", nil
 	default:
-		return "unknown", ErrNotApplicable
+		return "unknown", vapi.ErrNotApplicable
 	}
 }
 
@@ -284,127 +280,3 @@ func (s SigAlg) Hash() crypto.Hash {
 func (s SigAlg) HashFunc() crypto.Hash {
 	return s.Hash()
 }
-
-type Message []byte
-
-func (d Message) Kind() string {
-	return "bytes"
-}
-
-type Signer struct {
-	Kid string
-	Alg SigAlg
-	Key crypto.Signer
-}
-
-// Sign implements [SignerSchemer].
-func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) ([]byte, error) {
-	alg := s.Alg
-	if len(options) != 0 {
-		alg = options[0]
-	}
-	if alg == SigAlgHS256 || alg == SigAlgHS384 || alg == SigAlgHS512 {
-		return s.Key.Sign(rand.Reader, artifact, alg)
-	}
-	digest := []byte(artifact)
-	if hash := alg.Hash(); hash != 0 {
-		if !hash.Available() {
-			return nil, &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
-		}
-		h := hash.New()
-		_, _ = h.Write(artifact)
-		digest = h.Sum(nil)
-	}
-	return s.Key.Sign(rand.Reader, digest, alg)
-}
-
-type SignVerifier struct {
-	Kid string
-	Alg SigAlg
-	Key crypto.PublicKey
-}
-
-// VerifySignature implements [SignatureVerificationSchemer].
-func (s *SignVerifier) VerifySignature(signature []byte, digest []byte, options ...SigAlg) error {
-	alg := s.Alg
-	if len(options) != 0 {
-		alg = options[0]
-	}
-
-	message := digest
-	hash := alg.Hash()
-	if alg == SigAlgHS256 || alg == SigAlgHS384 || alg == SigAlgHS512 {
-		if !hash.Available() {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
-		}
-		key, ok := s.Key.([]byte)
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for HMAC", s.Key)}
-		}
-		mac := hmac.New(hash.New, key)
-		_, _ = mac.Write(message)
-		if !hmac.Equal(signature, mac.Sum(nil)) {
-			return ErrInvalidSignature
-		}
-		return nil
-	}
-	if hash != 0 {
-		if !hash.Available() {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
-		}
-		h := hash.New()
-		_, _ = h.Write(digest)
-		digest = h.Sum(nil)
-	}
-
-	valid := false
-	switch alg {
-	case SigAlgRS256, SigAlgRS384, SigAlgRS512, SigAlgRSASHA1:
-		key, ok := s.Key.(*rsa.PublicKey)
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for RSA", s.Key)}
-		}
-		valid = rsa.VerifyPKCS1v15(key, hash, digest, signature) == nil
-
-	case SigAlgPS256, SigAlgPS384, SigAlgPS512:
-		key, ok := s.Key.(*rsa.PublicKey)
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for RSA-PSS", s.Key)}
-		}
-		valid = rsa.VerifyPSS(key, hash, digest, signature, &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash}) == nil
-
-	case SigAlgES256, SigAlgES384, SigAlgES512, SigAlgES256K:
-		key, ok := s.Key.(*ecdsa.PublicKey)
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for ECDSA", s.Key)}
-		}
-		valid = ecdsa.VerifyASN1(key, digest, signature)
-
-	case SigAlgEd25519:
-		key, ok := s.Key.(ed25519.PublicKey)
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for Ed25519", s.Key)}
-		}
-		valid = ed25519.Verify(key, message, signature)
-
-	case SigAlgEd448:
-		key, ok := s.Key.(interface {
-			Verify(message, signature []byte) bool
-		})
-		if !ok {
-			return &ErrorCategory{Category: ErrNotApplicable, Cause: fmt.Errorf("invalid key type %T for Ed448", s.Key)}
-		}
-		valid = key.Verify(message, signature)
-
-	default:
-		return &ErrorCategory{Category: ErrUnsupported, Cause: fmt.Errorf("unsupported signature algorithm %d", alg)}
-	}
-
-	if !valid {
-		return ErrInvalidSignature
-	}
-	return nil
-}
-
-var _ SignerSchemer[Message, SigAlg] = &Signer{}
-var _ SignatureVerificationSchemer[SigAlg] = &SignVerifier{}

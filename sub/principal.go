@@ -1,6 +1,10 @@
-package vapi
+package sub
 
-import "time"
+import (
+	"time"
+
+	"github.com/veles-security/vapi"
+)
 
 // Principal is a default, protocol-neutral implementation of Principal.
 type Principal struct {
@@ -17,7 +21,7 @@ type Principal struct {
 	assuranceLevel        int
 	claims                map[string]any
 	attributes            map[string]any
-	actor                 Principaler
+	actor                 vapi.Principal
 	source                string
 }
 
@@ -99,7 +103,7 @@ func (p *Principal) Attributes() map[string]any {
 	}
 	return cloneStringAnyMap(p.attributes)
 }
-func (p *Principal) Actor() Principaler {
+func (p *Principal) Actor() vapi.Principal {
 	if p == nil {
 		return nil
 	}
@@ -201,7 +205,7 @@ func (p *Principal) WithAttributes(attributes map[string]any) *Principal {
 }
 
 // WithActor sets the actor principal.
-func (p *Principal) WithActor(actor Principaler) *Principal {
+func (p *Principal) WithActor(actor vapi.Principal) *Principal {
 	if p == nil {
 		return nil
 	}

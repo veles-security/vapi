@@ -1,7 +1,9 @@
-package vapi
+package sub
+
+import "github.com/veles-security/vapi"
 
 // CloneClaims returns a defensive copy of the principal claims.
-func CloneClaims(p Principaler) map[string]any {
+func CloneClaims(p vapi.Principal) map[string]any {
 	if p == nil {
 		return nil
 	}
@@ -9,7 +11,7 @@ func CloneClaims(p Principaler) map[string]any {
 }
 
 // CloneAttributes returns a defensive copy of the principal attributes.
-func CloneAttributes(p Principaler) map[string]any {
+func CloneAttributes(p vapi.Principal) map[string]any {
 	if p == nil {
 		return nil
 	}
