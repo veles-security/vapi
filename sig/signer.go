@@ -18,7 +18,7 @@ type Signer struct {
 // Sign implements [SignerSchemer].
 func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) ([]byte, error) {
 	if s == nil {
-		return nil, configurationError("nil signer")
+		return nil, &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("nil signer")}
 	}
 	alg := s.Alg
 	if len(options) != 0 {
@@ -27,7 +27,7 @@ func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) 
 	if err := validateSigner(alg, s.Key); err != nil {
 		return nil, err
 	}
-	if isHMAC(alg) {
+	if alg.IsHMAC() {
 		return safeSign(s.Key, artifact, alg)
 	}
 	digest := []byte(artifact)

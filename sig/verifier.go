@@ -32,7 +32,7 @@ func (s *SignVerifier) VerifySignature(signature []byte, digest []byte, options 
 
 	message := digest
 	hash := alg.Hash()
-	if isHMAC(alg) {
+	if alg.IsHMAC() {
 		if !hash.Available() {
 			return &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
 		}

@@ -107,6 +107,22 @@ const (
 	SigAlgRSASHA1
 )
 
+func (sa SigAlg) Available() bool {
+	switch sa {
+	case SigAlgRS256, SigAlgRS384, SigAlgRS512,
+		SigAlgES256, SigAlgES384, SigAlgES512,
+		SigAlgPS256, SigAlgPS384, SigAlgPS512,
+		SigAlgEd25519, SigAlgES256K, SigAlgRSASHA1:
+		return true
+	default:
+		return false
+	}
+}
+
+func (sa SigAlg) IsHMAC() bool {
+	return sa == SigAlgHS256 || sa == SigAlgHS384 || sa == SigAlgHS512
+}
+
 func NewSigAlgFromOAuth(s string) (SigAlg, error) {
 	switch s {
 	case "HS256":
