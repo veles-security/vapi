@@ -1,5 +1,4 @@
 PWD := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
-PWD := $(dir $(abspath $(firstword $(MAKEFILE_LIST))))
 REPORT_DIR := test/reports/sast
 
 .PHONY: sast-gosec sast-govulncheck sast-semgrep  sast test image-push
