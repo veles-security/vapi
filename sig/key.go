@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/hmac"
 	"crypto/rsa"
+	"fmt"
 	"io"
 )
 
@@ -20,7 +21,14 @@ func NewHmacKey(key []byte) *HmacKey {
 func (k HmacKey) Public() crypto.PublicKey { return k.key }
 
 func (k HmacKey) Sign(random io.Reader, artifact []byte, opts crypto.SignerOpts) ([]byte, error) {
-	mac := hmac.New(opts.HashFunc().New, k.key)
+	if opts == nil {
+		return nil, fmt.Errorf("HMAC signer options are nil")
+	}
+	hash := opts.HashFunc()
+	if hash == 0 || !hash.Available() {
+		return nil, fmt.Errorf("HMAC hash %v is unavailable", hash)
+	}
+	mac := hmac.New(hash.New, k.key)
 	_, _ = mac.Write(artifact)
 	return mac.Sum(nil), nil
 }

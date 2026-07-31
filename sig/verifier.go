@@ -18,15 +18,21 @@ type SignVerifier struct {
 }
 
 // VerifySignature implements [SignatureVerificationSchemer].
-func (s *SignVerifier) VerifySignature(signature []byte, digest []byte, options ...SigAlg) error {
+func (s *SignVerifier) VerifySignature(signature []byte, digest []byte, options ...SigAlg) (err error) {
+	if s == nil {
+		return &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("nil signature verifier")}
+	}
 	alg := s.Alg
 	if len(options) != 0 {
 		alg = options[0]
 	}
+	if err := validateVerifierKey(alg, s.Key); err != nil {
+		return err
+	}
 
 	message := digest
 	hash := alg.Hash()
-	if alg == SigAlgHS256 || alg == SigAlgHS384 || alg == SigAlgHS512 {
+	if isHMAC(alg) {
 		if !hash.Available() {
 			return &vapi.ErrorCategory{Category: vapi.ErrNotApplicable, Cause: fmt.Errorf("hash %v is unavailable", hash)}
 		}

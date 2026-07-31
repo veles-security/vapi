@@ -3,7 +3,7 @@ package sig
 import (
 	"context"
 	"crypto"
-	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 
 	"github.com/veles-security/vapi"
@@ -17,15 +17,18 @@ type Signer struct {
 
 // Sign implements [SignerSchemer].
 func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) ([]byte, error) {
+	if s == nil {
+		return nil, configurationError("nil signer")
+	}
 	alg := s.Alg
 	if len(options) != 0 {
 		alg = options[0]
 	}
-	if alg == SigAlgEd448 {
-		return nil, &vapi.ErrorCategory{Category: vapi.ErrUnsupported, Cause: fmt.Errorf("Ed448 is not implemented")}
+	if err := validateSigner(alg, s.Key); err != nil {
+		return nil, err
 	}
-	if alg == SigAlgHS256 || alg == SigAlgHS384 || alg == SigAlgHS512 {
-		return s.Key.Sign(rand.Reader, artifact, alg)
+	if isHMAC(alg) {
+		return safeSign(s.Key, artifact, alg)
 	}
 	digest := []byte(artifact)
 	if hash := alg.Hash(); hash != 0 {
@@ -36,7 +39,11 @@ func (s *Signer) Sign(ctx context.Context, artifact Message, options ...SigAlg) 
 		_, _ = h.Write(artifact)
 		digest = h.Sum(nil)
 	}
-	return s.Key.Sign(rand.Reader, digest, alg)
+	opts := crypto.SignerOpts(alg)
+	if alg == SigAlgPS256 || alg == SigAlgPS384 || alg == SigAlgPS512 {
+		opts = &rsa.PSSOptions{SaltLength: rsa.PSSSaltLengthEqualsHash, Hash: alg.Hash()}
+	}
+	return safeSign(s.Key, digest, opts)
 }
 
 var _ vapi.Signer[Message, SigAlg] = &Signer{}

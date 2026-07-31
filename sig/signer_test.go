@@ -32,7 +32,7 @@ func TestSigner_Sign(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hmacKey := []byte("a sufficiently long shared secret for signature tests")
+	hmacKey := []byte("a sufficiently long shared secret for all HMAC signature tests!!!")
 	artifact := sig.Message("digest")
 	hmacSignerKey := sig.NewHmacKey(hmacKey)
 
@@ -59,7 +59,6 @@ func TestSigner_Sign(t *testing.T) {
 		{name: "PS384", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgPS384, Key: sig.PssKey{keyRSA2048}}, verifier: &sig.SignVerifier{Alg: sig.SigAlgPS384, Key: &keyRSA2048.PublicKey}},
 		{name: "PS512", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgPS512, Key: sig.PssKey{keyRSA2048}}, verifier: &sig.SignVerifier{Alg: sig.SigAlgPS512, Key: &keyRSA2048.PublicKey}},
 		{name: "Ed25519", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgEd25519, Key: keyEd25519}, verifier: &sig.SignVerifier{Alg: sig.SigAlgEd25519, Key: keyEd25519Public}},
-		{name: "ES256K", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgES256K, Key: keyES256}, verifier: &sig.SignVerifier{Alg: sig.SigAlgES256K, Key: &keyES256.PublicKey}},
 		{name: "RSASHA1", artifact: artifact, signer: &sig.Signer{Alg: sig.SigAlgRSASHA1, Key: keyRSA2048}, verifier: &sig.SignVerifier{Alg: sig.SigAlgRSASHA1, Key: &keyRSA2048.PublicKey}},
 	}
 	for _, tt := range tests {
@@ -81,5 +80,94 @@ func TestSigner_Sign(t *testing.T) {
 				t.Errorf("VerifySignature() failed: %v", err)
 			}
 		})
+	}
+}
+
+func TestRejectsInsecureOrIncompatibleKeys(t *testing.T) {
+	weakRSA, err := rsa.GenerateKey(rand.Reader, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p256, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p384, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name     string
+		alg      sig.SigAlg
+		signer   *sig.Signer
+		verifier *sig.SignVerifier
+	}{
+		{
+			name:     "short HMAC key",
+			alg:      sig.SigAlgHS256,
+			signer:   &sig.Signer{Alg: sig.SigAlgHS256, Key: sig.NewHmacKey([]byte("short"))},
+			verifier: &sig.SignVerifier{Alg: sig.SigAlgHS256, Key: []byte("short")},
+		},
+		{
+			name:     "weak RSA key",
+			alg:      sig.SigAlgRS256,
+			signer:   &sig.Signer{Alg: sig.SigAlgRS256, Key: weakRSA},
+			verifier: &sig.SignVerifier{Alg: sig.SigAlgRS256, Key: &weakRSA.PublicKey},
+		},
+		{
+			name:     "wrong ES256 curve",
+			alg:      sig.SigAlgES256,
+			signer:   &sig.Signer{Alg: sig.SigAlgES256, Key: p384},
+			verifier: &sig.SignVerifier{Alg: sig.SigAlgES256, Key: &p384.PublicKey},
+		},
+		{
+			name:     "P-256 is not secp256k1",
+			alg:      sig.SigAlgES256K,
+			signer:   &sig.Signer{Alg: sig.SigAlgES256K, Key: p256},
+			verifier: &sig.SignVerifier{Alg: sig.SigAlgES256K, Key: &p256.PublicKey},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := tt.signer.Sign(context.Background(), sig.Message("message")); err == nil {
+				t.Fatal("Sign() accepted insecure or incompatible key")
+			}
+			if err := tt.verifier.VerifySignature(nil, []byte("message")); err == nil {
+				t.Fatal("VerifySignature() accepted insecure or incompatible key")
+			}
+		})
+	}
+}
+
+func TestInvalidSignerConfigurationReturnsError(t *testing.T) {
+	tests := []struct {
+		name   string
+		signer *sig.Signer
+	}{
+		{name: "nil key", signer: &sig.Signer{Alg: sig.SigAlgRS256}},
+		{name: "unknown algorithm", signer: &sig.Signer{Alg: sig.SigAlgUnknown, Key: sig.NewHmacKey(make([]byte, 64))}},
+		{name: "algorithm and key mismatch", signer: &sig.Signer{Alg: sig.SigAlgRS256, Key: sig.NewHmacKey(make([]byte, 64))}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := tt.signer.Sign(context.Background(), sig.Message("message")); err == nil {
+				t.Fatal("Sign() succeeded unexpectedly")
+			}
+		})
+	}
+}
+
+func TestNilReceiverReturnsError(t *testing.T) {
+	var signer *sig.Signer
+	if _, err := signer.Sign(context.Background(), sig.Message("message")); err == nil {
+		t.Fatal("nil Signer did not return an error")
+	}
+
+	var verifier *sig.SignVerifier
+	if err := verifier.VerifySignature(nil, []byte("message")); err == nil {
+		t.Fatal("nil SignVerifier did not return an error")
 	}
 }
