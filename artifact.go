@@ -134,16 +134,16 @@ type AuthApplier[R any] interface {
 	ApplyAuthentication(ctx context.Context, request R, principal Principal) error
 }
 
-// ArtifactInjector writes an artifact into a carrier such as an HTTP request
+// Writer writes an artifact into a carrier such as an HTTP request
 // or response.
-type Injector[C any, A Artifact, O any] interface {
-	InjectArtifact(ctx context.Context, carrier C, artifact A, options ...O) error
+type Writer[C any, A Artifact, O any] interface {
+	WriteArtifact(ctx context.Context, carrierWriter C, artifact A, options ...O) error
 }
 
-// ArtifactExtractor reads an artifact from a carrier such as an HTTP request
+// Reader reads an artifact from a carrier such as an HTTP request
 // or response.
-type Extractor[C any, A Artifact, O any] interface {
-	ExtractArtifact(ctx context.Context, carrier C, options ...O) (A, error)
+type Reader[C any, A Artifact, O any] interface {
+	ReadArtifact(ctx context.Context, carrier C, options ...O) (A, error)
 }
 
 // Extracts Principaler from an artifact A
