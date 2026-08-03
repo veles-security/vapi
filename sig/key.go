@@ -18,7 +18,7 @@ func NewHmacKey(key []byte) *HmacKey {
 	return &HmacKey{key: key}
 }
 
-func (k HmacKey) Public() crypto.PublicKey { return k.key }
+func (k HmacKey) Public() crypto.PublicKey { return nil }
 
 func (k HmacKey) Sign(random io.Reader, artifact []byte, opts crypto.SignerOpts) ([]byte, error) {
 	if opts == nil {
