@@ -1,6 +1,7 @@
 package sub
 
 import (
+	"slices"
 	"time"
 
 	"github.com/veles-security/vapi"
@@ -23,6 +24,7 @@ type Principal struct {
 	attributes            map[string]any
 	actor                 vapi.Principal
 	source                string
+	grantedScopes         []string
 }
 
 func (p *Principal) Issuer() string {
@@ -114,6 +116,15 @@ func (p *Principal) Source() string {
 		return ""
 	}
 	return p.source
+}
+
+// GrantedScopes returns a defensive copy of the authorization scopes granted
+// by the credential that produced the principal.
+func (p *Principal) GrantedScopes() []string {
+	if p == nil {
+		return nil
+	}
+	return slices.Clone(p.grantedScopes)
 }
 
 // NewBasePrincipal creates a default principal implementation with the minimum identifying fields.
@@ -212,3 +223,15 @@ func (p *Principal) WithActor(actor vapi.Principal) *Principal {
 	p.actor = actor
 	return p
 }
+
+// WithGrantedScopes replaces the authorization scopes granted by the
+// credential that produced the principal.
+func (p *Principal) WithGrantedScopes(scopes ...string) *Principal {
+	if p == nil {
+		return nil
+	}
+	p.grantedScopes = slices.Clone(scopes)
+	return p
+}
+
+var _ vapi.ScopedPrincipal = (*Principal)(nil)

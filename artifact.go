@@ -92,6 +92,17 @@ type Principal interface {
 	Source() string
 }
 
+// ScopedPrincipal describes a principal whose authenticating credential grants
+// a set of authorization scopes.
+//
+// GrantedScopes returns the scopes granted by the credential that produced the
+// principal. It does not describe all scopes that the principal may be allowed
+// to request.
+type ScopedPrincipal interface {
+	Principal
+	GrantedScopes() []string
+}
+
 // Decoder decodes an explicitly selected representation into A.
 // Implementations must enforce limits before expensive processing.
 type Decoder[A Artifact, O any] interface {
