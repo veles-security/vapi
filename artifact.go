@@ -157,10 +157,9 @@ type Reader[C any, A Artifact, O any] interface {
 	ReadArtifact(ctx context.Context, carrier C, options ...O) (A, error)
 }
 
-// Extracts Principaler from an artifact A
-// For example Principaler from JWT token
-type PrincipalExtractor[A Artifact, O any] interface {
-	ExtractPrincipal(ctx context.Context, artifact A, options ...O) (Principal, error)
+// ArtifactAuthenticator authenticates an artifact and derives its Principal.
+type ArtifactAuthenticator[A Artifact, O any] interface {
+	AuthenticateArtifact(ctx context.Context, artifact A, options ...O) (Principal, error)
 }
 
 type Signer[A Artifact, O any] interface {
